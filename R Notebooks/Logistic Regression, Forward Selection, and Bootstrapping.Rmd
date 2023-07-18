@@ -1,0 +1,100 @@
+# Logistic Regression, Forward Selection, and Bootstrapping
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Reading the dataset
+```{r}
+placekick <- read.csv("data/Placekick.csv", header=TRUE, stringsAsFactors=FALSE)
+```
+
+Fitting the logistic regression model with "good" as response and "distance" as preditor
+```{r}
+fit=glm(good~distance,family = binomial(link = logit),data=placekick)
+summary(fit)
+```
+Here the coefficient of distance is negative, meaning that as the distance increases the probability of success decreases. Here the p-value of distance is also significantly lower which shows that the predictor is significant.
+
+In logistic regression, the coefficients represent the change in the log odds of the response variable for a one-unit increase in the corresponding predictor variable, holding all other predictor variables constant.
+
+In this case, for one unit increase in "distance", the odds increases by a factor of exp(-0.115027) = 0.891. This is about 10% decrease in odds of "good"(success)
+
+```{r fig21}
+library(ggplot2)
+ggplot(data=placekick, aes(x = distance, y = good)) +
+  geom_point() +
+  stat_smooth(method = "glm", method.args = list(family = "binomial"), se = FALSE)
+```
+The plot shows that the probability of success decreases as the distance of the placekick increases.
+
+Now considering all the predictors and applying Forward Selection Algorithm to choose the best model. Fitting from null model to full model
+```{r}
+null_model=glm(good~1,family = binomial(link = logit),data=placekick)
+full_model=glm(good~.,family = binomial(link = logit),data=placekick)
+
+forward_aic = step(null_model,scope = formula(full_model), direction="forward")
+```
+
+Now fitting the best fit model suggested by the step function.
+```{r}
+best_fit = glm(formula = formula(forward_aic), family = binomial(link = logit), data = placekick)
+beta = summary(best_fit)$coefficients[,1]
+beta
+```
+This model tells us that probability of success is negatively affceted by distance, change and wind but positively affected by PAT.
+
+Getting predictor names suggested by the Forward Selection Algorithm
+```{r}
+best_fit_pred <- all.vars(formula(forward_aic))[-1]
+best_fit_res <- all.vars(formula(forward_aic))[1]
+```
+
+Now computing the decision boundary
+```{r fig22}
+B = as.matrix(beta)
+X = as.matrix(cbind(1,placekick[,best_fit_pred]))
+prob <- exp(X%*%B)/(1+exp(X%*%B))
+decision <- ifelse(prob >= 0.5, 1, 0)
+table(decision,placekick$good)
+```
+Creating BootGLM Function which takes x,y and B as input and returns the Standard Error for each of the Predictor Variables
+```{r}
+bootGLM <- function(x, y, B=1000) {
+  set.seed(1)
+  y = data.frame(y)
+  x = data.frame(x)
+  n = nrow(x)
+  m = ncol(x)
+
+  coef <- c()
+  for (i in 1:B){
+    indices = sample(1:n,n,replace=TRUE)
+    x_boot = x[indices,]
+    y_boot = y[indices,]
+    fit_boot=glm(formula = y_boot ~ ., family = binomial(link = logit), data = x_boot)
+    coef <- rbind(coef,fit_boot$coefficients)
+  }
+  
+  return(apply(coef, 2, sd))
+}
+```
+
+Fitting the predictors suggested by Forward Selection Algorithm with our bootGLM Function
+```{r fig23}
+x = placekick[,best_fit_pred]
+y = placekick[best_fit_res]
+boot_se = bootGLM(x,y)
+```
+
+Comparing the Standard Error returned from the bootGLM function with the Summary function
+```{r}
+best_fit_se <-summary(best_fit)$coefficients[,2]
+print(best_fit_se)
+print(boot_se)
+```
+Looking at the percentage difference in Standard Errors between the 2 models
+```{r}
+(boot_se - best_fit_se)*100/best_fit_se
+```
+Here, the standard errors for Intercept, distance, change are not so different in the 2 models but Bootstrap suggests that the standard error for PAT should be 6.09% higher and standard error for Wind should be 5.35% lower. 

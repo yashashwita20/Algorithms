@@ -1,0 +1,209 @@
+# Anova, F-Test, Hypothesis Test and Polynomial Regression
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning=FALSE, message=FALSE)
+```
+
+# Reading Data
+
+```{r}
+library(MASS)
+data <- Boston[,names(Boston) %in% c("lstat","chas","rad","medv")]
+data = data[complete.cases(data),]
+data$chas = as.factor(data$chas)
+data$rad = as.factor(data$rad)
+```
+
+# CHAS vs MEDV
+```{r fig30}
+boxplot(data$medv ~ data$chas,ylab='MEDV', xlab='CHAS', lwd=2, pch = 16)
+```
+From the box plot it is clear that the houses in the area which borders Charles River have high Median Value compared to the houses in the area which do not border Charles River.
+
+The boxes for the houses near the river also have a higher range of values, which suggests that there is more variability in the median values of houses near the river.
+
+The box plot describes the spread of the data in each category of Chas. The box plot of Chas 0 shows that there are outliers (lying outside the quantile range).
+
+The boxes for the houses near the river also have a higher range of values, which suggests that there is more variability in the median values of houses near the river.
+
+```{r}
+fit = lm(data$medv ~ data$chas)
+summary(fit)
+anova(fit)
+```
+The F-test here is testing if the Chas variable is significant or not. 
+Null hypothesis: Chas Variable is not significant
+Alternate Hypothesis: Char Variable is significant
+
+The p-value for the f-test is 0.0000739, which is significantly lower, therefore, we can reject the null hypothesis. This implies that the Chas variable is indeed significant.
+———
+In the summary of the model, we can see the same p-value for chas1 variable. As the value is significantly lower, we can assume that the point estimates are correct. 
+
+The summary shows that the point estimate is 6.3462 ($6346.2)  higher in favor of Chas 1 (Houses in the area that border Charles river) compared to Chas 0 (Houses in the area that do not border Charles river).
+
+This perfectly aligns with the results we got from the box plots.
+
+# RAD vs MEDV
+```{r fig31}
+boxplot(data$medv ~ data$rad,ylab='MEDV', xlab='RAD', lwd=2, pch = 16)
+```
+From the box plot, we can see that the median values for rad=4, rad = 6 and rad =24 are comparatively lower than the rest.
+
+We can observe outliers in rad = 1,4,5,7 and 24
+```{r}
+fit = lm(data$medv ~ data$rad)
+summary(fit)
+anova(fit)
+```
+The F-test here is testing if the rad variable is significant or not. 
+Null hypothesis: rad Variable is not significant
+Alternate Hypothesis: rad Variable is significant
+
+The p-value for the f-test is 2.2e-16, which is significantly lower, therefore, we can reject the null hypothesis. This implies that the rad variable is indeed significant.
+———
+In the summary of the model, we can see the same p-value for rad variable. As the value is significantly lower, we can assume that the point estimates are correct. 
+
+The summary shows that the point estimate with respect to rad=0. We can see that rad4, rad6 and rad24 have lower point estimates compared to rad0 and rest have higher. 
+
+This perfectly aligns with the box plots
+
+# RAD*CHAS vs MEDV
+```{r fig32}
+boxplot(data$medv ~ data$rad*data$chas,ylab='MEDV', xlab='RAD*CHAS', lwd=2, pch = 16)
+```
+```{r fig33}
+interaction.plot(data$rad, data$chas, data$medv, col=2:4, lwd=2, cex.axis=1, cex.lab=1)
+```
+```{r}
+fit = lm(data$medv ~ data$chas*data$rad)
+summary(fit)
+anova(fit)
+```
+From the box plot, we can see that the mean of median values for 
+rad=3 is equal for both chas0 and chas1, 
+rad = 4, rad = 5 and rad =24 chas1 is higher than chas0
+rad=8 chas0 is higher than chas1
+
+We can observe the same thing through the interaction plot as well
+
+The F-tests is testing the hypothesis that the corresponding coefficients are zero, which would imply that the corresponding variable has no effect on medv.
+
+The first f-test is testing the significance of only chas
+The second f-test is testing the significance of only rad
+The third f-test is testing the significance of the interaction between chas and rad.
+
+All the f-tests have significantly lower p-value, which means that the variables aree indeed significant.
+
+The point estimates from the summary of the model align with the box plots
+
+# LSTAT vs MEDV
+
+```{r fig34}
+library(ggplot2)
+ggplot(Boston, aes(x = lstat, y = medv, color = factor(chas))) +
+  geom_point() +
+  geom_smooth(method = "lm", se = FALSE) +
+  labs(x = "LSTAT", y = "MEDV") +
+  scale_color_discrete(name = "CHAS")
+```
+
+Null Hypothesis : The slopes of the medv-lstat relationship are equal for both Chas 0 and Chas 1
+Alternative Hypothesis : The slopes of the medv-lstat relationship are not equal for Chas 0 and Chas 1
+
+From the scatterplot, you can observe that the relationship between medv and lstat appears to be similar
+for both Chas 0 and Chas 1
+
+A significantly lower p-value would indicate that the null hypothesis can be rejected, and that the rate of decrease in median property value does depend on whether the area borders the Charles River
+
+```{r}
+fit0 <- lm(data$medv ~ data$chas*data$lstat)
+fit1 <- lm(data$medv ~ data$lstat)
+
+anova(fit1,fit0)
+```
+
+We can conclude that the rate of decrease of medv with respect to lstat depends on whether chas. Since the interaction term between lstat and chas is significant, it means that the rate of decrease indeed depends on chas. 
+
+'''
+# Polynomial Regression
+
+```{r message=FALSE}
+library(MASS)
+library(quantreg)
+data(Boston)
+data <- Boston[,names(Boston) %in% c("lstat","medv")]
+tmp = data[,c("medv","lstat")] 
+tmp = tmp[complete.cases(tmp),]
+tmp = as.data.frame(tmp)
+names(tmp) = c("medv","lstat")
+data = tmp
+attach(data)
+```
+## (a) Fitting a polynomial model of degree 3 by least squares.
+```{r}
+#least squares:
+fit = lm(medv ~ poly(lstat, 3))
+summary(fit)
+```
+## (b) Fitting a polynomial model of degree 3 by robust regression models. 
+```{r}
+#least absolute regression:
+m.lar = rq(medv ~ poly(lstat, 3))
+summary(m.lar)
+
+#Huber’s M-estimation:
+m.huber = rlm(medv ~ poly(lstat, 3),psi = psi.huber)
+summary(m.huber)
+
+#Hampel’s M-estimation:
+m.hampel = rlm(medv ~ poly(lstat, 3),psi = psi.hampel)
+summary(m.hampel)
+
+#Tukey Bisquare M-estimation:
+m.bisquare = rlm(medv ~ poly(lstat, 3),psi = psi.bisquare)
+summary(m.bisquare)
+
+#Least median of squares
+m.lms = lmsreg(medv ~ poly(lstat, 3))
+m.lms$coefficients
+
+#Least trimmed sum of squares
+m.lts = ltsreg(medv ~ poly(lstat, 3))
+m.lts$coefficients
+```
+## (c) Scatterplot with an overlay of all the above fits. 
+```{r fig35}
+plot(lstat, medv, pch = 16)
+pts = seq(min(lstat), max(lstat), len=100)
+
+val = predict(fit, data.frame(lstat = pts))
+lines(pts, val, col="blue", lwd = 3)
+
+val = predict(m.lar, data.frame(lstat = pts))
+lines(pts, val, col="red", lwd = 3)
+
+val = predict(m.huber, data.frame(lstat = pts))
+lines(pts, val, col="green", lwd = 3)
+
+val = predict(m.hampel, data.frame(lstat = pts))
+lines(pts, val, col="cyan", lwd = 3)
+
+val = predict(m.bisquare, data.frame(lstat = pts))
+lines(pts, val, col="yellow", lwd = 3)
+
+val = predict(m.lms, data.frame(lstat = pts))
+lines(pts, val, col="deeppink", lwd = 3)
+
+val = predict(m.lts, data.frame(lstat = pts))
+lines(pts, val, col="lightblue", lwd = 3)
+
+legend(x="topright", legend=c("Least squares", "Least absolute regression",
+                              "Huber’s M-estimation", "Hampel’s M-estimation",
+                              "Tukey Bisquare M-estimation","Least median of squares",
+                              "Least trimmed sum of squares"),
+       col=c("blue","red","green","cyan","yellow","deeppink","lightblue"), 
+       lty=1,lwd=3, cex=0.8)
+```
+
+
+__Observations:__ The least squares, least absolute regression and the M-estimation methods show similar results compared to least median of squares and least trimmed sum of squares. Compared to the remaining models, the least median of squares and least trimmed sum of squares estimates of the first degree coefficient is larger and the estimates of the second degree coefficient is smaller. Whereas for the third degree coefficient, least squares estimate of the coefficient is the lowest and least trimmed sum of squares estimate is the highest.

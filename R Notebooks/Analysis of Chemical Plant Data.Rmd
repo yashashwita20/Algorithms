@@ -1,13 +1,21 @@
 # Analysis of Chemical Plant Data: OLS Regression, Multiple Regression, and Backward Variable Selection
 
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
 
-
-
+```{r include=FALSE}
+require(car)
+library(leaps)
+library(corrplot)
+library(lars)
+library(dplyr)
+library(tidyr)
+```
 
 ## Reading the dataset
 
-
-```r
+```{r}
 stackloss_ <- read.csv("data/stackloss.csv", header=TRUE,sep=" ")
 ```
 
@@ -15,31 +23,9 @@ stackloss_ <- read.csv("data/stackloss.csv", header=TRUE,sep=" ")
 
 ### 1 a) Fitting OLS of Stack.Loss as a function of Acid.Conc
 
-
-```r
+```{r}
 OLS = lm(Stack.Loss~Acid.Conc,data=stackloss_)
 summary(OLS)
-```
-
-```
-## 
-## Call:
-## lm(formula = Stack.Loss ~ Acid.Conc, data = stackloss_)
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -1.1584 -0.5584 -0.3066  0.1247  2.2416 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)  
-## (Intercept) -42.7441    23.4027  -1.826   0.0835 .
-## Acid.Conc     0.7590     0.3992   1.901   0.0725 .
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 0.9565 on 19 degrees of freedom
-## Multiple R-squared:  0.1599,	Adjusted R-squared:  0.1156 
-## F-statistic: 3.615 on 1 and 19 DF,  p-value: 0.07252
 ```
 
 ### Observation:
@@ -58,34 +44,12 @@ meaningful.
 
 ### 1 b) Centering Acid.Conc and refitting the model
 
-
-```r
+```{r}
 stackloss_['Acid.Conc.c'] = stackloss_$Acid.Conc - mean(stackloss_$Acid.Conc)
 
 OLS1 = lm(Stack.Loss~Acid.Conc.c,data=stackloss_)
 
 summary(OLS1)
-```
-
-```
-## 
-## Call:
-## lm(formula = Stack.Loss ~ Acid.Conc.c, data = stackloss_)
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -1.1584 -0.5584 -0.3066  0.1247  2.2416 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)   1.7524     0.2087   8.395 8.13e-08 ***
-## Acid.Conc.c   0.7590     0.3992   1.901   0.0725 .  
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 0.9565 on 19 degrees of freedom
-## Multiple R-squared:  0.1599,	Adjusted R-squared:  0.1156 
-## F-statistic: 3.615 on 1 and 19 DF,  p-value: 0.07252
 ```
 
 ### Observation:
@@ -98,35 +62,16 @@ Stack.Loss when the Acid.Conc is at its mean value.
 
 ### 1 c) Model Assumption for OLS1
 
-
-```r
+```{r fig3}
 plot(OLS1,which=1)
 ```
 
-![plot of chunk fig3](figure/fig3-1.png)
-
-
-```r
+```{r fig4}
 residualPlots(OLS1)
 ```
 
-![plot of chunk fig4](figure/fig4-1.png)
-
-```
-##             Test stat Pr(>|Test stat|)
-## Acid.Conc.c   -0.4322           0.6707
-## Tukey test    -0.4322           0.6656
-```
-
-
-```r
+```{r fig5}
 qqPlot(OLS1$residuals)
-```
-
-![plot of chunk fig5](figure/fig5-1.png)
-
-```
-## [1] 1 2
 ```
 
 ### Observation:
@@ -146,12 +91,9 @@ confidence intervals.
 
 ### 1 d) Finding the point with highest leverage and assessing its influence over the slope parameter
 
-
-```r
+```{r fig6}
 plot(hatvalues(OLS1), type='h', col="blue", ylab="Hat Values", main="Hat values")
 ```
-
-![plot of chunk fig6](figure/fig6-1.png)
 
 Here I have used hat values to find the leverage point and as we can see
 in the plot above, observation 17th looks like the obvious point of
@@ -160,45 +102,19 @@ leverage.
 Now lets assess its influence on slope. I am doing this by removing the
 point of leverage(point with highest hat value) and fitting the model.
 
-
-```r
+```{r}
 lvrg_pt = which.max(hatvalues(OLS1))
 OLS1_without_lvrg_pt = lm(Stack.Loss~Acid.Conc.c,data = stackloss_[-lvrg_pt,])
 summary(OLS1_without_lvrg_pt)
 ```
 
-```
-## 
-## Call:
-## lm(formula = Stack.Loss ~ Acid.Conc.c, data = stackloss_[-lvrg_pt, 
-##     ])
-## 
-## Residuals:
-##     Min      1Q  Median      3Q     Max 
-## -1.1628 -0.5674 -0.2965  0.1226  2.2372 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)   1.7419     0.2227   7.823 3.36e-07 ***
-## Acid.Conc.c   0.8139     0.5175   1.573    0.133    
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 0.9819 on 18 degrees of freedom
-## Multiple R-squared:  0.1208,	Adjusted R-squared:  0.07196 
-## F-statistic: 2.473 on 1 and 18 DF,  p-value: 0.1332
-```
-
-
-```r
+```{r fig7}
 plot(stackloss_$Acid.Conc.c, stackloss_$Stack.Loss,pch=16,xlab = "Centered Acid Concentration",ylab = "Stack Loss",main = "Acid Concentration vs Stack Loss")
 points(stackloss_$Acid.Conc.c[lvrg_pt], stackloss_$Stack.Loss[lvrg_pt], col = 'red',pch = 8)
 abline(OLS1,lwd=3)
 abline(OLS1_without_lvrg_pt,col="red",lwd=3)
 legend("topleft",legend = c("OLS1 without Leverage Point","OLS1"),col = c("red","black"),lwd=3)
 ```
-
-![plot of chunk fig7](figure/fig7-1.png)
 
 ### Observation:
 
@@ -208,8 +124,7 @@ slope of the regression line.
 
 ### 1 e) Bootstrap Standard Error and 95% Confidence Interval
 
-
-```r
+```{r}
 set.seed(42)
 bootLS <- function(x,y,conf=0.95,B=1000) {
   
@@ -252,21 +167,6 @@ bootLS <- function(x,y,conf=0.95,B=1000) {
 bootLS(stackloss_$Acid.Conc.c,stackloss_$Stack.Loss)
 ```
 
-```
-## $`Standard OLS Confidence Interval`
-## [1] 1.670873
-## 
-## $`Bootstrap COnfidence Interval`
-## [1] 1.199234
-## 
-## $`Standard OLS Standard Error`
-##         x 
-## 0.3991529 
-## 
-## $`Bootstrap Standard Error`
-## [1] 0.2942717
-```
-
 ### Observation:
 
 Our original dataset is very small with just 21 observations here.
@@ -282,71 +182,23 @@ sampling variability of the estimates.
 
 ### Fitting a multiple regression model of Stack.Loss as a function of Air.Flow, Water.Temp and Acid.Conc
 
-
-```r
+```{r}
 mlm = lm(Stack.Loss~Air.Flow+Water.Temp+Acid.Conc,data=stackloss_)
 summary(mlm)
 ```
 
-```
-## 
-## Call:
-## lm(formula = Stack.Loss ~ Air.Flow + Water.Temp + Acid.Conc, 
-##     data = stackloss_)
-## 
-## Residuals:
-##      Min       1Q   Median       3Q      Max 
-## -0.72377 -0.17117 -0.04551  0.23614  0.56978 
-## 
-## Coefficients:
-##             Estimate Std. Error t value Pr(>|t|)    
-## (Intercept)  3.61416    8.90213   0.406  0.68982    
-## Air.Flow     0.07156    0.01349   5.307  5.8e-05 ***
-## Water.Temp   0.12953    0.03680   3.520  0.00263 ** 
-## Acid.Conc   -0.15212    0.15629  -0.973  0.34405    
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-## 
-## Residual standard error: 0.3243 on 17 degrees of freedom
-## Multiple R-squared:  0.9136,	Adjusted R-squared:  0.8983 
-## F-statistic:  59.9 on 3 and 17 DF,  p-value: 3.016e-09
-```
-
 ### 2 a) Model Assumptions on Multivariate Model
 
-
-```r
+```{r fig8}
 plot(mlm,which=1)
 ```
 
-![plot of chunk fig8](figure/fig8-1.png)
-
-
-```r
+```{r fig9}
 residualPlots(mlm)
 ```
 
-![plot of chunk fig9](figure/fig9-1.png)
-
-```
-##            Test stat Pr(>|Test stat|)  
-## Air.Flow      0.7594          0.45866  
-## Water.Temp    2.1794          0.04459 *
-## Acid.Conc    -1.0038          0.33040  
-## Tukey test    1.5033          0.13277  
-## ---
-## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-```
-
-
-```r
+```{r fig10}
 qqPlot(mlm$residuals)
-```
-
-![plot of chunk fig10](figure/fig10-1.png)
-
-```
-## [1] 21  4
 ```
 
 ### Observation:
@@ -366,34 +218,22 @@ therefore we cannot actually trust this evidence.
 
 ### 2 b) Evaluating the Multicolinearity between predictors
 
-
-```r
+```{r fig11}
 vif(mlm)
 ```
 
-```
-##   Air.Flow Water.Temp  Acid.Conc 
-##   2.906484   2.572632   1.333587
-```
-
-
-```r
+```{r fig12}
 plot(vif(mlm), type='h', col=4, lwd=3)
 abline(h = 5, lty=2)
 ```
 
-![plot of chunk fig12](figure/fig12-1.png)
-
 Air.Flow has the highest VIF within the three predictors, stating that
 it's Variance is the most explained by other predictors in the model.
 
-
-```r
+```{r fig13}
 corr = cor(stackloss_[c("Air.Flow","Water.Temp","Acid.Conc")])
 corrplot.mixed(corr)
 ```
-
-![plot of chunk fig13](figure/fig13-1.png)
 
 ### Observation:
 
@@ -407,8 +247,7 @@ predictors in the model.
 
 ### 2 c) Using Cp to choose the best Regression Predictor Subset
 
-
-```r
+```{r}
 dat_x = stackloss_[,c('Air.Flow','Water.Temp','Acid.Conc')]
 dat_y = stackloss_[,c('Stack.Loss')]
 
@@ -421,32 +260,21 @@ selected_predictors <- predictors[best_model[-1]]
 selected_predictors
 ```
 
-```
-## [1] "Air.Flow"   "Water.Temp"
-```
-
 The selected predictors from the best regression subset are Air.Flow and
 Water.Temp
 
 ### 2 c) Using Cp to choose the best subset LASSO fit
 
+```{r fig14}
 
-```r
 fit = lm(dat_y~.,data=dat_x)
 lasso.fit = lars(x = model.matrix(fit)[,-1], y = dat_y, normalize=FALSE, intercept=TRUE)
 plot(lasso.fit, lwd=2)
 ```
 
-![plot of chunk fig14](figure/fig14-1.png)
-
-
-```r
+```{r}
 lasso_pred = coef(lasso.fit, s=which.min(lasso.fit$Cp), mode="step")
 names(lasso_pred[lasso_pred>0])
-```
-
-```
-## [1] "Air.Flow"   "Water.Temp"
 ```
 
 The selected predictors from the best regression subset are Air.Flow and
@@ -461,8 +289,7 @@ predictors which shows that these two are quite significant.
 
 ### 3 a) Function to perform Backward Variable Selection
 
-
-```r
+```{r}
 BackwardPath <- function(x, y) {
   p <- ncol(x)
 
@@ -509,8 +336,8 @@ BackwardPath <- function(x, y) {
 
 ### 3 b) Function to produce plots for the above function's output
 
+```{r}
 
-```r
 BackwardVisualize <- function(coeffPath) {
   coeff_ = bind_rows(coeffPath["Coefficients"][[1]]) %>% replace(is.na(.), 0)
 
@@ -534,27 +361,17 @@ BackwardVisualize <- function(coeffPath) {
 
 ### 3 c) Applying the functions to the Stackloss dataset
 
-
-```r
+```{r Fig1, echo=TRUE, fig.height=12, fig.width=10}
 dat_x = stackloss_[,c('Air.Flow','Water.Temp','Acid.Conc')]
 dat_y = stackloss_[,c('Stack.Loss')]
 coeffPath = BackwardPath(dat_x,dat_y)
 BackwardVisualize(coeffPath)
 ```
 
-![plot of chunk Fig1](figure/Fig1-1.png)
-
-
-```r
+```{r}
 best_model = which.min(coeffPath["AIC"][[1]])
 best_model_coeff = coeffPath["Coefficients"][[1]][best_model]
 best_model_coeff
-```
-
-```
-## [[1]]
-## (Intercept)    Air.Flow  Water.Temp 
-## -5.03588401  0.06711544  0.12953514
 ```
 
 ### Observation:
@@ -567,8 +384,7 @@ more evidence on the significance of these two predictors.
 
 ### 4 a) Generating Random Predictors for Stackloss data and fitting a multiple regression model on it
 
-
-```r
+```{r}
 set.seed(1)
 dat_x = stackloss_[,c('Air.Flow','Water.Temp','Acid.Conc')]
 dat_y = stackloss_[,c('Stack.Loss')]
@@ -582,8 +398,7 @@ dat_x["x5"] = runif(n,min=-1,max=1)
 
 ### 4 b) Using Cp to find best subset regression model
 
-
-```r
+```{r}
 test <- regsubsets(dat_x,dat_y,method="backward",intercept=TRUE)
 sum_ = summary(test)
 best_model_index = which.min(sum_$cp)
@@ -593,52 +408,30 @@ selected_predictors <- predictors[best_model[-1]]
 selected_predictors
 ```
 
-```
-## [1] "Air.Flow"   "Water.Temp" "x5"
-```
-
 ### 4 b) Using Cp to find best subset LASSO model
 
-
-```r
+```{r fig15}
 fit = lm(dat_y~.,data=dat_x)
 lasso.fit = lars(x = model.matrix(fit)[,-1], y = dat_y, normalize=FALSE, intercept=TRUE)
 plot(lasso.fit, lwd=2)
 ```
 
-![plot of chunk fig15](figure/fig15-1.png)
-
-
-```r
+```{r}
 lasso_pred = coef(lasso.fit, s=which.min(lasso.fit$Cp), mode="step")
 names(lasso_pred[lasso_pred>0])
 ```
 
-```
-## [1] "Air.Flow"   "Water.Temp"
-```
-
 ### 4 b) Using the Backward Selection method to find the best subset regression model
 
-
-```r
+```{r Fig2, echo=TRUE, fig.height=12, fig.width=10}
 coeffPath = BackwardPath(dat_x,dat_y)
 BackwardVisualize(coeffPath)
 ```
 
-![plot of chunk Fig2](figure/Fig2-1.png)
-
-
-```r
+```{r}
 best_model = which.min(coeffPath["AIC"][[1]])
 best_model_coeff = coeffPath["Coefficients"][[1]][best_model]
 best_model_coeff
-```
-
-```
-## [[1]]
-## (Intercept)    Air.Flow  Water.Temp          x1          x5 
-##  -5.3027967   0.0511140   0.1889124  -0.1698089   0.2482353
 ```
 
 ### Observation:
@@ -653,8 +446,7 @@ but not lasso.
 
 ### 4 c) Repeating the above simulation 100 times and finding best subsets using all three methods
 
-
-```r
+```{r}
 selected_pred_reg = c()
 selected_pred_lasso = c()
 selected_pred_back = c()
@@ -686,41 +478,15 @@ for (i in 1:100){
   best_model_coeff = coeffPath["Coefficients"][[1]][best_model]
   selected_pred_back <- c(selected_pred_back,unlist(names(best_model_coeff[[1]])[-1]))
 }
+  
 ```
 
-
-```r
+```{r fig17}
 table(selected_pred_lasso)/100
-```
 
-```
-## selected_pred_lasso
-##   Air.Flow Water.Temp         x1         x2         x3         x4         x5 
-##       1.00       1.00       0.09       0.06       0.07       0.13       0.06
-```
-
-```r
 table(selected_pred_reg)/100
-```
 
-```
-## selected_pred_reg
-##  Acid.Conc   Air.Flow Water.Temp         x1         x2         x3         x4 
-##       0.07       1.00       1.00       0.18       0.17       0.13       0.21 
-##         x5 
-##       0.19
-```
-
-```r
 table(selected_pred_back)/100
-```
-
-```
-## selected_pred_back
-##  Acid.Conc   Air.Flow Water.Temp         x1         x2         x3         x4 
-##       0.19       1.00       1.00       0.28       0.30       0.25       0.28 
-##         x5 
-##       0.25
 ```
 
 ### Observation:
