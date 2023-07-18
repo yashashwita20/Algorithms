@@ -24,7 +24,7 @@ library(tidyr)
 ## Reading the dataset
 
 ```{r}
-stackloss_ <- read.csv("~/Desktop/University/Quarter 2/Stats Model/Exam/stackloss.csv", header=TRUE,sep=" ")
+stackloss_ <- read.csv("stackloss.csv", header=TRUE,sep=" ")
 ```
 
 ## Problem 1:
