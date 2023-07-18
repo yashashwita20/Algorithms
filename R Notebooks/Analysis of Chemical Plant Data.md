@@ -19,6 +19,15 @@ editor_options:
 stackloss_ <- read.csv("stackloss.csv", header=TRUE,sep=" ")
 ```
 
+```
+## Warning in file(file, "rt"): cannot open file 'stackloss.csv': No such file or
+## directory
+```
+
+```
+## Error in file(file, "rt"): cannot open the connection
+```
+
 ## Problem 1:
 
 ### 1 a) Fitting OLS of Stack.Loss as a function of Acid.Conc
