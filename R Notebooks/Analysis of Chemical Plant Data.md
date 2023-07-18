@@ -1,12 +1,4 @@
----
-title: "Analysis of Chemical Plant Data: OLS Regression, Multiple Regression, and Backward Variable Selection"
-output:
-  html_document: default
-  pdf_document: default
-editor_options: 
-  markdown: 
-    wrap: 72
----
+# Analysis of Chemical Plant Data: OLS Regression, Multiple Regression, and Backward Variable Selection
 
 
 
@@ -16,16 +8,7 @@ editor_options:
 
 
 ```r
-stackloss_ <- read.csv("stackloss.csv", header=TRUE,sep=" ")
-```
-
-```
-## Warning in file(file, "rt"): cannot open file 'stackloss.csv': No such file or
-## directory
-```
-
-```
-## Error in file(file, "rt"): cannot open the connection
+stackloss_ <- read.csv("data/stackloss.csv", header=TRUE,sep=" ")
 ```
 
 ## Problem 1:
